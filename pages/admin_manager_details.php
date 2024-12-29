@@ -5,7 +5,7 @@
 <?php
 // admin_manager_details.php
 session_start();
-require '/../includes/db_connect.php';
+require '../includes/db_connect.php';
 
 if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['Admin', 'Manager'])) {
     header("Location: error.php");
