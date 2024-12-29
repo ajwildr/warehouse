@@ -1,0 +1,8 @@
+{
+    "require": {
+        "picqer/php-barcode-generator": "^2.4",
+        "setasign/fpdf": "^1.8",
+        "khanamiryan/qrcode-detector-decoder": "^2.0",
+        "endroid/qr-code": "^5.1"
+    }
+}
