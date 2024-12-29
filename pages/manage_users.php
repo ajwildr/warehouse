@@ -63,7 +63,7 @@ $users_result = $conn->query($users_query);
         <?php endif; ?>
 
         <!-- Add User Form -->
-        <form method="POST">
+        <form method="POST" action="manage_users.php">
             <h2>Add User</h2>
             <div class="form-group">
                 <label for="username">Username</label>
