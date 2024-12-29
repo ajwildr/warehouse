@@ -1,6 +1,6 @@
 <?php
 session_start();
-require 'includes/db_connect.php';
+// require 'includes/db_connect.php';
 
 // Redirect to login if user is not logged in
 if (!isset($_SESSION['user_id'])) {
