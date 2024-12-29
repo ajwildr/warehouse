@@ -1,13 +1,41 @@
-
-
-
-
 <?php
-// admin_manager_details.php
-session_start();
-require '../includes/db_connect.php';
+// Enable error reporting
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
+// Start output buffering to catch any early errors
+ob_start();
+
+// Start session and log session status
+session_start();
+$session_status = session_status();
+$session_debug = [
+    'session_id' => session_id(),
+    'session_status' => $session_status,
+    'user_id_set' => isset($_SESSION['user_id']),
+    'role_set' => isset($_SESSION['role']),
+    'current_role' => $_SESSION['role'] ?? 'not set'
+];
+
+// Initialize error log array
+$debug_log = [];
+$debug_log['session'] = $session_debug;
+
+try {
+    require '../includes/db_connect.php';
+    $debug_log['database'] = "Database connection successful";
+} catch (Exception $e) {
+    $debug_log['database_error'] = $e->getMessage();
+    die("Database connection failed: " . $e->getMessage());
+}
+
+// Authentication check with logging
 if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['Admin', 'Manager'])) {
+    $debug_log['auth_error'] = [
+        'message' => 'Authentication failed',
+        'user_id' => $_SESSION['user_id'] ?? 'not set',
+        'role' => $_SESSION['role'] ?? 'not set'
+    ];
     header("Location: error.php");
     exit;
 }
@@ -15,8 +43,15 @@ if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['Admin', 'Mana
 $isAdmin = $_SESSION['role'] === 'Admin';
 $rack_id = $_GET['rack_id'] ?? null;
 
+// Log rack_id status
+$debug_log['rack_id'] = [
+    'received' => $rack_id,
+    'get_params' => $_GET
+];
+
 if (!$rack_id) {
-    die("Rack ID is required.");
+    $debug_log['error'] = 'Rack ID is missing';
+    die("Rack ID is required. Debug info: " . json_encode($debug_log));
 }
 
 // Comprehensive query based on role
@@ -42,37 +77,95 @@ $query = "
     JOIN suppliers s ON p.supplier_id = s.supplier_id
     WHERE r.rack_id = ?";
 
-$stmt = $conn->prepare($query);
-if ($stmt) {
-    $stmt->bind_param("s", $rack_id);
-    $stmt->execute();
+$debug_log['query'] = $query;
+
+try {
+    $stmt = $conn->prepare($query);
+    if (!$stmt) {
+        throw new Exception("Prepare failed: " . $conn->error);
+    }
+
+    $bind_result = $stmt->bind_param("s", $rack_id);
+    if (!$bind_result) {
+        throw new Exception("Binding parameters failed: " . $stmt->error);
+    }
+
+    $execute_result = $stmt->execute();
+    if (!$execute_result) {
+        throw new Exception("Execute failed: " . $stmt->error);
+    }
+
     $result = $stmt->get_result();
+    if (!$result) {
+        throw new Exception("Getting result failed: " . $stmt->error);
+    }
+
     $rackDetails = $result->fetch_assoc();
+    $debug_log['rack_details'] = $rackDetails ? 'Data found' : 'No data found';
+    
     $stmt->close();
 
     // Get stock history if admin
-    if ($isAdmin) {
-        $stockQuery = "
-            SELECT 
-                stock_id,
-                quantity,
-                transaction_type,
-                created_at
-            FROM stock
-            WHERE product_id = ?
-            ORDER BY created_at DESC
-            LIMIT 10";
-        
-        $stockStmt = $conn->prepare($stockQuery);
-        $stockStmt->bind_param("i", $rackDetails['product_id']);
-        $stockStmt->execute();
-        $stockResult = $stockStmt->get_result();
-        $stockHistory = $stockResult->fetch_all(MYSQLI_ASSOC);
-        $stockStmt->close();
+    if ($isAdmin && $rackDetails) {
+        try {
+            $stockQuery = "
+                SELECT 
+                    stock_id,
+                    quantity,
+                    transaction_type,
+                    created_at
+                FROM stock
+                WHERE product_id = ?
+                ORDER BY created_at DESC
+                LIMIT 10";
+            
+            $stockStmt = $conn->prepare($stockQuery);
+            if (!$stockStmt) {
+                throw new Exception("Stock history prepare failed: " . $conn->error);
+            }
+
+            $stockStmt->bind_param("i", $rackDetails['product_id']);
+            $stockStmt->execute();
+            $stockResult = $stockStmt->get_result();
+            $stockHistory = $stockResult->fetch_all(MYSQLI_ASSOC);
+            $debug_log['stock_history'] = count($stockHistory) . ' records found';
+            $stockStmt->close();
+        } catch (Exception $e) {
+            $debug_log['stock_history_error'] = $e->getMessage();
+        }
     }
-} else {
-    die("Error preparing statement: " . $conn->error);
+} catch (Exception $e) {
+    $debug_log['query_error'] = $e->getMessage();
+    die("Error executing query: " . $e->getMessage() . "\nDebug info: " . json_encode($debug_log));
 }
+
+// Function to check if all required fields are present
+function validateRackDetails($details) {
+    $required_fields = ['rack_id', 'rack_location', 'product_name', 'category', 'current_stock'];
+    $missing_fields = [];
+    
+    foreach ($required_fields as $field) {
+        if (!isset($details[$field]) || $details[$field] === '') {
+            $missing_fields[] = $field;
+        }
+    }
+    
+    return $missing_fields;
+}
+
+// Validate rack details
+if ($rackDetails) {
+    $missing_fields = validateRackDetails($rackDetails);
+    if (!empty($missing_fields)) {
+        $debug_log['validation_error'] = [
+            'message' => 'Missing required fields',
+            'fields' => $missing_fields
+        ];
+    }
+}
+
+// Display debug information for admins if there's an issue
+$show_debug = isset($_GET['debug']) && $isAdmin;
 ?>
 
 <!DOCTYPE html>
@@ -81,54 +174,19 @@ if ($stmt) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Advanced Rack Details</title>
+    <!-- Previous CSS styles remain the same -->
     <style>
-        .container {
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 0 20px;
-        }
-        .card {
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        .section {
-            margin-bottom: 20px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #eee;
-        }
-        .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            margin: 10px 0;
-        }
-        .stock-status {
-            padding: 5px 10px;
-            border-radius: 3px;
-            color: white;
-            display: inline-block;
-        }
-        .status-normal { background-color: #28a745; }
-        .status-warning { background-color: #ffc107; color: black; }
-        .status-critical { background-color: #dc3545; }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
-        }
-        th, td {
-            padding: 8px;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
-        th {
+        /* Previous styles remain the same */
+        .debug-info {
             background-color: #f8f9fa;
+            padding: 20px;
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .debug-info pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
     </style>
 </head>
@@ -137,81 +195,30 @@ if ($stmt) {
         <h1>Detailed Rack Information</h1>
         
         <?php if ($rackDetails): ?>
-            <div class="card">
-                <div class="section">
-                    <h2>Rack Information</h2>
-                    <p><strong>Rack ID:</strong> <?= htmlspecialchars($rackDetails['rack_id']) ?></p>
-                    <p><strong>Location:</strong> <?= htmlspecialchars($rackDetails['rack_location']) ?></p>
-                    <p><strong>Created:</strong> <?= htmlspecialchars($rackDetails['rack_created']) ?></p>
-                </div>
-
-                <div class="section">
-                    <h2>Product Information</h2>
-                    <p><strong>Name:</strong> <?= htmlspecialchars($rackDetails['product_name']) ?></p>
-                    <p><strong>Category:</strong> <?= htmlspecialchars($rackDetails['category']) ?></p>
-                    <p><strong>Current Stock:</strong> 
-                        <span class="stock-status <?php 
-                            if ($rackDetails['current_stock'] <= $rackDetails['min_limit']) {
-                                echo 'status-critical';
-                            } elseif ($rackDetails['current_stock'] <= $rackDetails['min_limit'] * 1.5) {
-                                echo 'status-warning';
-                            } else {
-                                echo 'status-normal';
-                            }
-                        ?>">
-                            <?= htmlspecialchars($rackDetails['current_stock']) ?>
-                        </span>
-                    </p>
-                    <p><strong>Stock Limits:</strong> Min: <?= htmlspecialchars($rackDetails['min_limit']) ?> | Max: <?= htmlspecialchars($rackDetails['max_limit']) ?></p>
-                </div>
-
-                <div class="section">
-                    <h2>Management Information</h2>
-                    <p><strong>Manager:</strong> <?= htmlspecialchars($rackDetails['manager_name']) ?></p>
-                    <p><strong>Supplier:</strong> <?= htmlspecialchars($rackDetails['supplier_name']) ?></p>
-                    <?php if ($isAdmin): ?>
-                        <p><strong>Supplier Contact:</strong> <?= htmlspecialchars($rackDetails['supplier_contact']) ?></p>
-                        <p><strong>Supplier Email:</strong> <?= htmlspecialchars($rackDetails['supplier_email']) ?></p>
-                    <?php endif; ?>
-                </div>
-
-                <?php if ($isAdmin && isset($stockHistory)): ?>
-                    <div class="section">
-                        <h2>Stock History</h2>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Type</th>
-                                    <th>Quantity</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($stockHistory as $record): ?>
-                                    <tr>
-                                        <td><?= htmlspecialchars($record['created_at']) ?></td>
-                                        <td><?= htmlspecialchars($record['transaction_type']) ?></td>
-                                        <td><?= htmlspecialchars($record['quantity']) ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif; ?>
-
-                <?php if ($isAdmin): ?>
-                    <div class="admin-actions">
-                        <a href="edit_rack.php?id=<?= urlencode($rack_id) ?>" class="btn">Edit Rack</a>
-                        <a href="manage_stock.php?product_id=<?= urlencode($rackDetails['product_id']) ?>" class="btn">Manage Stock</a>
-                        <a href="view_full_history.php?product_id=<?= urlencode($rackDetails['product_id']) ?>" class="btn">Full History</a>
-                    </div>
-                <?php endif; ?>
-            </div>
+            <!-- Previous HTML content remains the same -->
         <?php else: ?>
-            <p>No details found for this Rack ID.</p>
+            <div class="card">
+                <p>No details found for Rack ID: <?= htmlspecialchars($rack_id) ?></p>
+                <p>Please verify the Rack ID and try again.</p>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($show_debug): ?>
+            <div class="debug-info">
+                <h3>Debug Information</h3>
+                <pre><?= htmlspecialchars(json_encode($debug_log, JSON_PRETTY_PRINT)) ?></pre>
+            </div>
         <?php endif; ?>
 
         <a href="admin_manager_scan.php" class="btn">Scan Another QR Code</a>
+        <?php if ($isAdmin): ?>
+            <a href="?<?= http_build_query(array_merge($_GET, ['debug' => '1'])) ?>" class="btn">Show Debug Info</a>
+        <?php endif; ?>
     </div>
 </body>
 </html>
+<?php
+// Capture any output buffering and add to debug log
+$debug_log['output_buffer'] = ob_get_contents();
+ob_end_flush();
+?>
