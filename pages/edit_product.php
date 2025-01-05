@@ -87,55 +87,59 @@ $suppliers_result = $conn->query($suppliers_query);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Product</title>
     <link rel="stylesheet" href="../assets/css/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <h1>Edit Product</h1>
+    <div class="container mt-5">
+        <div class="card shadow-lg p-4">
+            <h1 class="mb-4">Edit Product</h1>
 
-        <?php if ($success_message): ?>
-            <div class="alert alert-success"><?= $success_message ?></div>
-        <?php endif; ?>
+            <?php if ($success_message): ?>
+                <div class="alert alert-success"><?= $success_message ?></div>
+            <?php endif; ?>
 
-        <?php if ($error_message): ?>
-            <div class="alert alert-danger"><?= $error_message ?></div>
-        <?php endif; ?>
+            <?php if ($error_message): ?>
+                <div class="alert alert-danger"><?= $error_message ?></div>
+            <?php endif; ?>
 
-        <!-- Product Edit Form -->
-        <form method="POST">
-            <div class="mb-3">
-                <label for="product_name" class="form-label">Product Name</label>
-                <input type="text" class="form-control" id="product_name" name="product_name" value="<?= htmlspecialchars($product['name']) ?>" required>
-            </div>
-            <div class="mb-3">
-                <label for="category" class="form-label">Category</label>
-                <input type="text" class="form-control" id="category" name="category" value="<?= htmlspecialchars($manager_category) ?>" disabled>
-            </div>
-            <div class="mb-3">
-                <label for="supplier_id" class="form-label">Supplier</label>
-                <select class="form-control" id="supplier_id" name="supplier_id" required>
-                    <?php while ($supplier = $suppliers_result->fetch_assoc()): ?>
-                        <option value="<?= $supplier['supplier_id'] ?>" <?= ($supplier['supplier_id'] == $product['supplier_id']) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($supplier['name']) ?>
-                        </option>
-                    <?php endwhile; ?>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="current" class="form-label">Current Stock</label>
-                <input type="number" class="form-control" id="current" name="current" value="<?= $product['current'] ?>" required>
-            </div>
-            <div class="mb-3">
-                <label for="min_limit" class="form-label">Minimum Stock Limit</label>
-                <input type="number" class="form-control" id="min_limit" name="min_limit" value="<?= $product['min_limit'] ?>" required>
-            </div>
-            <div class="mb-3">
-                <label for="max_limit" class="form-label">Maximum Stock Limit</label>
-                <input type="number" class="form-control" id="max_limit" name="max_limit" value="<?= $product['max_limit'] ?>" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Update Product</button>
-        </form>
+            <!-- Product Edit Form -->
+            <form method="POST">
+                <div class="mb-3">
+                    <label for="product_name" class="form-label">Product Name</label>
+                    <input type="text" class="form-control" id="product_name" name="product_name" value="<?= htmlspecialchars($product['name']) ?>" required>
+                </div>
+                <div class="mb-3">
+                    <label for="category" class="form-label">Category</label>
+                    <input type="text" class="form-control" id="category" name="category" value="<?= htmlspecialchars($manager_category) ?>" disabled>
+                </div>
+                <div class="mb-3">
+                    <label for="supplier_id" class="form-label">Supplier</label>
+                    <select class="form-control" id="supplier_id" name="supplier_id" required>
+                        <?php while ($supplier = $suppliers_result->fetch_assoc()): ?>
+                            <option value="<?= $supplier['supplier_id'] ?>" <?= ($supplier['supplier_id'] == $product['supplier_id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($supplier['name']) ?>
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="current" class="form-label">Current Stock</label>
+                    <input type="number" class="form-control" id="current" name="current" value="<?= $product['current'] ?>" required>
+                </div>
+                <div class="mb-3">
+                    <label for="min_limit" class="form-label">Minimum Stock Limit</label>
+                    <input type="number" class="form-control" id="min_limit" name="min_limit" value="<?= $product['min_limit'] ?>" required>
+                </div>
+                <div class="mb-3">
+                    <label for="max_limit" class="form-label">Maximum Stock Limit</label>
+                    <input type="number" class="form-control" id="max_limit" name="max_limit" value="<?= $product['max_limit'] ?>" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Update Product</button>
+            </form>
 
-        <a href="manage_products.php" class="btn btn-secondary mt-3">Back to Products List</a>
+            <a href="manage_products.php" class="btn btn-secondary w-100 mt-3">Back to Products List</a>
+        </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -39,22 +39,16 @@ if ($role === 'Admin') {
     }
 }
 
-// Handle email sending
+// Handle email opening
 if (isset($_POST['send_email'])) {
     $to = $_POST['supplier_email'];
-    $subject = "Low Stock Alert - " . $_POST['product_name'];
-    $message = $_POST['email_content'];
-    $headers = "From: warehouse@example.com\r\n";
-    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+    $subject = str_replace(" ", "%20", "Low Stock Alert - " . $_POST['product_name']); // Proper space encoding for subject
+    $message = str_replace("\n", "%0D%0A", $_POST['email_content']); // Proper line break encoding
+    $message = str_replace(" ", "%20", $message); // Proper space encoding
     
-    // Note: In production, use a proper email sending library
-    mail($to, $subject, $message, $headers);
-    
-    // Send JSON response for AJAX
-    if (isset($_POST['ajax'])) {
-        echo json_encode(['success' => true]);
-        exit;
-    }
+    $mailtoLink = "mailto:" . $to . "?subject=" . $subject . "&body=" . $message;
+    echo json_encode(['success' => true, 'mailtoLink' => $mailtoLink]);
+    exit;
 }
 ?>
 
@@ -214,13 +208,19 @@ if (isset($_POST['send_email'])) {
                 opacity: 1;
             }
         }
+
+        .error-message {
+            color: var(--danger-color);
+            margin-top: 10px;
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>Low Stock Products</h1>
-            <a href="dashboard.php" class="back-button">
+            <a href="admin_dashboard.php" class="back-button">
                 <i class="fas fa-arrow-left"></i> Back to Dashboard
             </a>
         </div>
@@ -255,7 +255,6 @@ if (isset($_POST['send_email'])) {
         </div>
     </div>
 
-    <!-- Email Modal -->
     <div id="emailModal" class="modal">
         <div class="modal-content">
             <h2>Send Email to Supplier</h2>
@@ -263,6 +262,11 @@ if (isset($_POST['send_email'])) {
                 <input type="hidden" id="supplier_email" name="supplier_email">
                 <input type="hidden" id="product_name" name="product_name">
                 <textarea id="email_content" name="email_content"></textarea>
+
+                <div class="error-message" id="emailError">
+                    Failed to open mail client. Please try again.
+                </div>
+
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
                     <button type="button" class="email-button" style="background-color: #6b7280;" onclick="closeEmailModal()">Cancel</button>
                     <button type="submit" class="email-button">Send Email</button>
@@ -271,7 +275,7 @@ if (isset($_POST['send_email'])) {
         </div>
     </div>
 
-    <div id="notification" class="notification">Email sent successfully!</div>
+    <div id="notification" class="notification">Email client opened successfully!</div>
 
     <script>
         function openEmailModal(productName, supplierEmail, currentStock, minLimit) {
@@ -279,6 +283,7 @@ if (isset($_POST['send_email'])) {
             const emailContent = document.getElementById('email_content');
             const supplierEmailInput = document.getElementById('supplier_email');
             const productNameInput = document.getElementById('product_name');
+            document.getElementById('emailError').style.display = 'none';
 
             const template = `Dear Supplier,
 
@@ -300,6 +305,7 @@ Warehouse Management Team`;
 
         function closeEmailModal() {
             document.getElementById('emailModal').style.display = 'none';
+            document.getElementById('emailError').style.display = 'none';
         }
 
         function showNotification() {
@@ -314,23 +320,25 @@ Warehouse Management Team`;
             e.preventDefault();
             
             const formData = new FormData(this);
-            formData.append('ajax', true);
             formData.append('send_email', true);
-
+            
             try {
                 const response = await fetch('', {
                     method: 'POST',
                     body: formData
                 });
-
                 const data = await response.json();
                 
-                if (data.success) {
+                if (data.success && data.mailtoLink) {
+                    window.location.href = data.mailtoLink;
                     closeEmailModal();
                     showNotification();
+                } else {
+                    document.getElementById('emailError').style.display = 'block';
                 }
             } catch (error) {
-                console.error('Error sending email:', error);
+                console.error('Error:', error);
+                document.getElementById('emailError').style.display = 'block';
             }
         });
 

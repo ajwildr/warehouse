@@ -18,6 +18,7 @@ class ComposerStaticInit8a308fcaea92706e6758aa7a0f9f27d9
         'P' => 
         array (
             'Picqer\\Barcode\\' => 15,
+            'PHPMailer\\PHPMailer\\' => 20,
         ),
         'E' => 
         array (
@@ -31,6 +32,10 @@ class ComposerStaticInit8a308fcaea92706e6758aa7a0f9f27d9
         array (
             'BaconQrCode\\' => 12,
         ),
+        'A' => 
+        array (
+            'Ajai5\\Warehouse\\' => 16,
+        ),
     );
 
     public static $prefixDirsPsr4 = array (
@@ -41,6 +46,10 @@ class ComposerStaticInit8a308fcaea92706e6758aa7a0f9f27d9
         'Picqer\\Barcode\\' => 
         array (
             0 => __DIR__ . '/..' . '/picqer/php-barcode-generator/src',
+        ),
+        'PHPMailer\\PHPMailer\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/phpmailer/phpmailer/src',
         ),
         'Endroid\\QrCode\\' => 
         array (
@@ -53,6 +62,10 @@ class ComposerStaticInit8a308fcaea92706e6758aa7a0f9f27d9
         'BaconQrCode\\' => 
         array (
             0 => __DIR__ . '/..' . '/bacon/bacon-qr-code/src',
+        ),
+        'Ajai5\\Warehouse\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/src',
         ),
     );
 

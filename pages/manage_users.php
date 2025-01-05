@@ -19,7 +19,7 @@ $categories_result = $conn->query($categories_query);
 // Handle User Creation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_user'])) {
     $username = trim($_POST['username']);
-    $email = !empty($_POST['email']) ? trim($_POST['email']) : null;
+    $email = trim($_POST['email']);
     $password = password_hash($_POST['password'], PASSWORD_BCRYPT);
     $role = $_POST['role'];
     $category = isset($_POST['category']) && $role !== 'Admin' && $role !== 'Accounting' ? $_POST['category'] : null;
@@ -55,140 +55,142 @@ $users_result = $conn->query($users_query);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Users</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .form-control {
-            margin-bottom: 15px;
+        body {
+            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            margin-top: 50px;
+        }
+        .form-section {
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .table-section {
+            margin-top: 30px;
+        }
+        .table {
+            background-color: #ffffff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .btn {
+            margin-right: 5px;
         }
         .alert {
-            padding: 15px;
+            border-radius: 10px;
+        }
+        .back-button {
             margin-bottom: 20px;
-            border: 1px solid transparent;
-            border-radius: 4px;
-        }
-        .alert-success {
-            color: #155724;
-            background-color: #d4edda;
-            border-color: #c3e6cb;
-        }
-        .alert-danger {
-            color: #721c24;
-            background-color: #f8d7da;
-            border-color: #f5c6cb;
-        }
-        .email-status {
-            font-style: italic;
-            color: #666;
-        }
-        .form-group {
-            margin-bottom: 1rem;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: .5rem;
-            font-weight: 500;
-        }
-        .table td, .table th {
-            padding: .75rem;
-            vertical-align: top;
-            border-top: 1px solid #dee2e6;
-        }
-        .input-required {
-            color: red;
-            margin-left: 3px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Manage Users</h1>
+        <!-- Added Back Button -->
+        <div class="back-button">
+            <a href="admin_dashboard.php" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+
+        <h1 class="text-center mb-4">Manage Users</h1>
 
         <?php if ($success_message): ?>
-            <div class="alert alert-success"><?= $success_message ?></div>
+            <div class="alert alert-success"> <?= $success_message ?> </div>
         <?php endif; ?>
         <?php if ($error_message): ?>
-            <div class="alert alert-danger"><?= $error_message ?></div>
+            <div class="alert alert-danger"> <?= $error_message ?> </div>
         <?php endif; ?>
 
         <!-- Add User Form -->
-        <form method="POST" action="<?php echo $_SERVER['PHP_SELF']; ?>" novalidate>
-            <h2>Add User</h2>
-            <div class="form-group">
-                <label for="username">Username<span class="input-required">*</span></label>
-                <input type="text" id="username" name="username" required class="form-control">
-            </div>
-            <div class="form-group">
-                <label for="email">Email Address</label>
-                <input type="email" id="email" name="email" class="form-control" 
-                       pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
-                       title="Please enter a valid email address">
-                <small class="form-text text-muted">Optional - Leave blank if not available</small>
-            </div>
-            <div class="form-group">
-                <label for="password">Password<span class="input-required">*</span></label>
-                <input type="password" id="password" name="password" required class="form-control">
-            </div>
-            <div class="form-group">
-                <label for="role">Role<span class="input-required">*</span></label>
-                <select id="role" name="role" class="form-control" required onchange="toggleCategoryDropdown()">
-                    <option value="">Select Role</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Manager">Manager</option>
-                    <option value="Accounting">Accounting</option>
-                    <option value="Worker">Worker</option>
-                </select>
-            </div>
-            <div class="form-group" id="category-group" style="display: none;">
-                <label for="category">Category (For Managers and Workers)</label>
-                <select id="category" name="category" class="form-control">
-                    <option value="">Select Category</option>
-                    <?php while ($category = $categories_result->fetch_assoc()): ?>
-                        <option value="<?= $category['cat_name'] ?>">
-                            <?= $category['cat_name'] ?>
-                        </option>
-                    <?php endwhile; ?>
-                </select>
-            </div>
-            <button type="submit" name="add_user" class="btn btn-primary">Add User</button>
-        </form>
+        <div class="form-section">
+            <h2 class="mb-4">Add User</h2>
+            <form method="POST" action="<?php echo $_SERVER['PHP_SELF']; ?>" novalidate>
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username<span class="text-danger">*</span></label>
+                    <input type="text" id="username" name="username" required class="form-control">
+                </div>
+                <div class="mb-3">
+    <label for="email" class="form-label">Email Address<span class="text-danger">*</span></label>
+    <input type="email" id="email" name="email" class="form-control" required
+           pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+           title="Please enter a valid email address">
+</div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password<span class="text-danger">*</span></label>
+                    <input type="password" id="password" name="password" required class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="role" class="form-label">Role<span class="text-danger">*</span></label>
+                    <select id="role" name="role" class="form-select" required onchange="toggleCategoryDropdown()">
+                        <option value="">Select Role</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Accounting">Accounting</option>
+                        <option value="Worker">Worker</option>
+                    </select>
+                </div>
+                <div class="mb-3" id="category-group" style="display: none;">
+                    <label for="category" class="form-label">Category (For Managers and Workers)</label>
+                    <select id="category" name="category" class="form-select">
+                        <option value="">Select Category</option>
+                        <?php while ($category = $categories_result->fetch_assoc()): ?>
+                            <option value="<?= $category['cat_name'] ?>">
+                                <?= $category['cat_name'] ?>
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+                <button type="submit" name="add_user" class="btn btn-primary">Add User</button>
+            </form>
+        </div>
 
         <!-- User List -->
-        <h2>Existing Users</h2>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>User ID</th>
-                    <th>Username</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Category</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php while ($user = $users_result->fetch_assoc()): ?>
+        <div class="table-section">
+            <h2 class="mb-4">Existing Users</h2>
+            <table class="table table-hover table-bordered">
+                <thead class="table-dark">
                     <tr>
-                        <td><?= $user['user_id'] ?></td>
-                        <td><?= htmlspecialchars($user['username']) ?></td>
-                        <td>
-                            <?php if (!empty($user['email'])): ?>
-                                <?= htmlspecialchars($user['email']) ?>
-                            <?php else: ?>
-                                <span class="email-status">Not provided</span>
-                            <?php endif; ?>
-                        </td>
-                        <td><?= htmlspecialchars($user['role']) ?></td>
-                        <td><?= $user['assigned_category'] ?? 'N/A' ?></td>
-                        <td>
-                            <a href="edit_user.php?user_id=<?= $user['user_id'] ?>" class="btn btn-info">Edit</a>
-                            <a href="delete_user.php?user_id=<?= $user['user_id'] ?>" class="btn btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
-                        </td>
+                        <th>User ID</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Role</th>
+                        <th>Category</th>
+                        <th>Actions</th>
                     </tr>
-                <?php endwhile; ?>
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    <?php while ($user = $users_result->fetch_assoc()): ?>
+                        <tr>
+                            <td><?= $user['user_id'] ?></td>
+                            <td><?= htmlspecialchars($user['username']) ?></td>
+                            <td>
+                                <?php if (!empty($user['email'])): ?>
+                                    <?= htmlspecialchars($user['email']) ?>
+                                <?php else: ?>
+                                    <span class="text-muted">Not provided</span>
+                                <?php endif; ?>
+                            </td>
+                            <td><?= htmlspecialchars($user['role']) ?></td>
+                            <td><?= $user['assigned_category'] ?? 'N/A' ?></td>
+                            <td>
+                                <a href="edit_user.php?user_id=<?= $user['user_id'] ?>" class="btn btn-info btn-sm">Edit</a>
+                                <a href="delete_user.php?user_id=<?= $user['user_id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure?')">Delete</a>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function toggleCategoryDropdown() {
             const role = document.getElementById('role').value;
@@ -204,7 +206,7 @@ $users_result = $conn->query($users_query);
         document.getElementById('email').addEventListener('input', function(e) {
             const email = e.target.value;
             const emailRegex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-            
+
             if (email && !emailRegex.test(email)) {
                 e.target.setCustomValidity('Please enter a valid email address');
             } else {

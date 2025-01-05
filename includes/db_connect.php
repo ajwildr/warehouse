@@ -1,9 +1,9 @@
 <?php
 // db_connect.php
 function getDBConnection() {
-    $host = "maceproject.mysql.database.azure.com";
+    $host = "enemy.mysql.database.azure.com";
     $username = "ajai";
-    $password = "Tatasky@123";
+    $password = "Mace@123";
     $database = "warehouse";
     
     $conn = mysqli_connect($host, $username, $password, $database);
@@ -18,3 +18,17 @@ function getDBConnection() {
 // Create a global connection object
 $conn = getDBConnection();
 ?>
+
+<?php
+// $servername = "localhost";
+// $username = "root";
+// $password = "";
+// $dbname = "warehouse";
+
+// $conn = new mysqli($servername, $username, $password, $dbname);
+
+// if ($conn->connect_error) {
+//     die("Connection failed: " . $conn->connect_error);
+// }
+?>
+

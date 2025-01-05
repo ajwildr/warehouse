@@ -77,81 +77,120 @@ $suppliers_result = $conn->query($suppliers_query);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Products</title>
-    <link rel="stylesheet" href="../assets/css/style.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            margin-top: 30px;
+        }
+        .back-button {
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            color: #0d6efd;
+            margin-bottom: 20px;
+        }
+        .back-button i {
+            margin-right: 5px;
+        }
+        .back-button:hover {
+            text-decoration: underline;
+        }
+        .table {
+            margin-top: 20px;
+        }
+        .form-control {
+            margin-bottom: 15px;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <h1>Manage Products</h1>
+        <!-- Back Button -->
+        <a href="manager_dashboard.php" class="back-button"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
 
+        <h1 class="mb-4">Manage Products</h1>
+
+        <!-- Success and Error Messages -->
         <?php if ($success_message): ?>
-            <div class="alert alert-success"><?= $success_message ?></div>
+            <div class="alert alert-success"><?= htmlspecialchars($success_message) ?></div>
         <?php endif; ?>
         <?php if ($error_message): ?>
-            <div class="alert alert-danger"><?= $error_message ?></div>
+            <div class="alert alert-danger"><?= htmlspecialchars($error_message) ?></div>
         <?php endif; ?>
 
         <!-- Add Product Form -->
-        <form method="POST">
-            <h2>Add New Product</h2>
-            <div class="mb-3">
-                <label for="product_name" class="form-label">Product Name</label>
-                <input type="text" class="form-control" id="product_name" name="product_name" required>
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="card-title">Add New Product</h2>
+                <form method="POST">
+                    <div class="form-group">
+                        <label for="product_name">Product Name</label>
+                        <input type="text" class="form-control" id="product_name" name="product_name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="supplier_id">Supplier</label>
+                        <select class="form-control" id="supplier_id" name="supplier_id" required>
+                            <option value="">Select Supplier</option>
+                            <?php while ($supplier = $suppliers_result->fetch_assoc()): ?>
+                                <option value="<?= $supplier['supplier_id'] ?>"><?= htmlspecialchars($supplier['name']) ?></option>
+                            <?php endwhile; ?>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="current">Current Stock</label>
+                        <input type="number" class="form-control" id="current" name="current" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="min_limit">Minimum Stock Limit</label>
+                        <input type="number" class="form-control" id="min_limit" name="min_limit" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="max_limit">Maximum Stock Limit</label>
+                        <input type="number" class="form-control" id="max_limit" name="max_limit" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Product</button>
+                </form>
             </div>
-            <div class="mb-3">
-                <label for="supplier_id" class="form-label">Supplier</label>
-                <select class="form-control" id="supplier_id" name="supplier_id" required>
-                    <option value="">Select Supplier</option>
-                    <?php while ($supplier = $suppliers_result->fetch_assoc()): ?>
-                        <option value="<?= $supplier['supplier_id'] ?>"><?= $supplier['name'] ?></option>
-                    <?php endwhile; ?>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label for="current" class="form-label">Current Stock</label>
-                <input type="number" class="form-control" id="current" name="current" required>
-            </div>
-            <div class="mb-3">
-                <label for="min_limit" class="form-label">Minimum Stock Limit</label>
-                <input type="number" class="form-control" id="min_limit" name="min_limit" required>
-            </div>
-            <div class="mb-3">
-                <label for="max_limit" class="form-label">Maximum Stock Limit</label>
-                <input type="number" class="form-control" id="max_limit" name="max_limit" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Add Product</button>
-        </form>
+        </div>
 
         <!-- List of Products -->
         <h2>Product List for <?= htmlspecialchars($manager_category) ?></h2>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Product ID</th>
-                    <th>Product Name</th>
-                    <th>Supplier</th>
-                    <th>Current Stock</th>
-                    <th>Min Limit</th>
-                    <th>Max Limit</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php while ($product = $products_result->fetch_assoc()): ?>
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead class="table-dark">
                     <tr>
-                        <td><?= $product['product_id'] ?></td>
-                        <td><?= $product['name'] ?></td>
-                        <td><?= $product['supplier_name'] ?? 'N/A' ?></td>
-                        <td><?= $product['current'] ?></td>
-                        <td><?= $product['min_limit'] ?></td>
-                        <td><?= $product['max_limit'] ?></td>
-                        <td>
-                            <a href="edit_product.php?product_id=<?= $product['product_id'] ?>" class="btn btn-warning">Edit</a>
-                            <a href="delete_product.php?product_id=<?= $product['product_id'] ?>" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this product?');">Delete</a>
-                        </td>
+                        <th>Product ID</th>
+                        <th>Product Name</th>
+                        <th>Supplier</th>
+                        <th>Current Stock</th>
+                        <th>Min Limit</th>
+                        <th>Max Limit</th>
+                        <th>Actions</th>
                     </tr>
-                <?php endwhile; ?>
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    <?php while ($product = $products_result->fetch_assoc()): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($product['product_id']) ?></td>
+                            <td><?= htmlspecialchars($product['name']) ?></td>
+                            <td><?= htmlspecialchars($product['supplier_name'] ?? 'N/A') ?></td>
+                            <td><?= htmlspecialchars($product['current']) ?></td>
+                            <td><?= htmlspecialchars($product['min_limit']) ?></td>
+                            <td><?= htmlspecialchars($product['max_limit']) ?></td>
+                            <td>
+                                <a href="edit_product.php?product_id=<?= $product['product_id'] ?>" class="btn btn-warning btn-sm">Edit</a>
+                                <a href="delete_product.php?product_id=<?= $product['product_id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this product?');">Delete</a>
+                            </td>
+                        </tr>
+                    <?php endwhile; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

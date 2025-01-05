@@ -213,13 +213,7 @@ if ($stmt) {
                     </div>
                 <?php endif; ?>
 
-                <?php if ($isAdmin): ?>
-                    <div class="admin-actions">
-                        <a href="edit_rack.php?id=<?= urlencode($rack_id) ?>" class="btn">Edit Rack</a>
-                        <a href="manage_stock.php?product_id=<?= urlencode($rackDetails['product_id']) ?>" class="btn">Manage Stock</a>
-                        <a href="view_full_history.php?product_id=<?= urlencode($rackDetails['product_id']) ?>" class="btn">Full History</a>
-                    </div>
-                <?php endif; ?>
+             
             </div>
         <?php else: ?>
             <p>No details found for this Rack ID.</p>

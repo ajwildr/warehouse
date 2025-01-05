@@ -49,35 +49,71 @@ if ($stmt) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rack Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <style>
+        body {
+            background-color: #f7f9fc;
+            min-height: 100vh;
+        }
+
         .container {
             max-width: 600px;
             margin: 50px auto;
+            padding: 0 1rem;
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #2C3E50;
+            text-decoration: none;
+            margin-bottom: 1.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            background-color: #ffffff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .back-button:hover {
+            background-color: #e9ecef;
+            transform: translateY(-2px);
+        }
+
+        .card {
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             text-align: center;
         }
-        .card {
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
+
         .card h2 {
-            margin: 0 0 10px;
+            margin-bottom: 1rem;
+            color: #2C3E50;
         }
+
         .card p {
-            margin: 5px 0;
+            margin: 0.5rem 0;
+            font-size: 1rem;
+            color: #5A5A5A;
         }
+
         .btn {
             display: inline-block;
-            margin-top: 15px;
-            padding: 10px 20px;
+            margin-top: 1.5rem;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
             text-decoration: none;
             background-color: #007bff;
             color: white;
-            border-radius: 4px;
+            border-radius: 0.5rem;
             text-align: center;
+            transition: all 0.3s ease;
         }
+
         .btn:hover {
             background-color: #0056b3;
         }
@@ -85,7 +121,13 @@ if ($stmt) {
 </head>
 <body>
     <div class="container">
-        <h1>Rack Details</h1>
+        <!-- Back Button -->
+        <a href="worker_dashboard.php" class="back-button">
+            <i class="bi bi-arrow-left"></i>
+            Back to Dashboard
+        </a>
+
+        <h1 class="text-center mb-4">Rack Details</h1>
         
         <?php if ($rack): ?>
             <div class="card">
@@ -96,10 +138,12 @@ if ($stmt) {
                 <p><strong>Created At:</strong> <?= htmlspecialchars($rack['created_at']) ?></p>
             </div>
         <?php else: ?>
-            <p>No details found for this Rack ID.</p>
+            <p class="text-center text-danger">No details found for this Rack ID.</p>
         <?php endif; ?>
 
-        <a href="scan_barcode.php" class="btn">Scan Another QR Code</a>
+        <div class="text-center">
+            <a href="scan_barcode.php" class="btn">Scan Another QR Code</a>
+        </div>
     </div>
 </body>
 </html>
