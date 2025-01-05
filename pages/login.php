@@ -3,6 +3,7 @@ session_start();
 require '../includes/db_connect.php';
 
 $error_message = '';
+$redirect_url = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $username = $_POST['username'];
@@ -34,24 +35,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $_SESSION['assigned_category'] = $user['assigned_category'];
                 }
                 
-                // Redirect to the appropriate dashboard
+                // Set redirect URL based on role
                 switch ($user['role']) {
                     case 'Admin':
-                        header("Location: admin_dashboard.php");
+                        $redirect_url = 'admin_dashboard.php';
                         break;
                     case 'Manager':
-                        header("Location: manager_dashboard.php");
+                        $redirect_url = 'manager_dashboard.php';
                         break;
                     case 'Accounting':
-                        header("Location: accounting_dashboard.php");
+                        $redirect_url = 'accounting_dashboard.php';
                         break;
                     case 'Worker':
-                        header("Location: worker_dashboard.php");
+                        $redirect_url = 'worker_dashboard.php';
                         break;
                     default:
                         $error_message = "Invalid role.";
                 }
-                exit;
             } else {
                 $error_message = "Invalid password.";
             }
@@ -222,6 +222,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
+        // Perform redirect if URL is set
+        <?php if (!empty($redirect_url)): ?>
+            window.location.href = '<?php echo $redirect_url; ?>';
+        <?php endif; ?>
+
         // Password visibility toggle
         function togglePassword() {
             const passwordInput = document.getElementById('password');
