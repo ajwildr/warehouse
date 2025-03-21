@@ -23,7 +23,7 @@
 $servername = "localhost";
 $username = "root";
 $password = "";
-$dbname = "cloudware";
+$dbname = "warehouse";
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 

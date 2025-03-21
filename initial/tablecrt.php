@@ -105,6 +105,7 @@ if ($conn->query($sql_users) === TRUE) {
     echo "Error creating users table: " . $conn->error . "<br>";
 }
 
+// Create tasks table
 $sql_tasks = "CREATE TABLE IF NOT EXISTS tasks (
     task_id INT NOT NULL AUTO_INCREMENT,
     assigned_by INT NOT NULL,
@@ -119,11 +120,12 @@ $sql_tasks = "CREATE TABLE IF NOT EXISTS tasks (
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci";
 
 if ($conn->query($sql_tasks) === TRUE) {
-    echo "tasks table created successfully<br>";
+    echo "Tasks table created successfully<br>";
 } else {
     echo "Error creating tasks table: " . $conn->error . "<br>";
 }
 
+// Create notifications table
 $sql_notifications = "CREATE TABLE IF NOT EXISTS notifications (
     id INT NOT NULL AUTO_INCREMENT,
     user_id INT NOT NULL,
@@ -139,8 +141,6 @@ if ($conn->query($sql_notifications) === TRUE) {
 } else {
     echo "Error creating notifications table: " . $conn->error . "<br>";
 }
-
-
 
 // Insert sample data
 // Categories
