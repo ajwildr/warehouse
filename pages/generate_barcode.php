@@ -1,19 +1,65 @@
 <?php 
+
 session_start(); 
 require __DIR__ . '/../vendor/autoload.php';
 use Endroid\QrCode\QrCode;
 use Endroid\QrCode\Writer\PngWriter;
 require_once __DIR__ . '/../vendor/setasign/fpdf/fpdf.php';
 
-// Validate rack_id from the query string
-$rack_id = $_GET['rack_id'] ?? null;
+require '../includes/db_connect.php';
 
-if (!$rack_id) {
-    die("Rack ID is required.");
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'Worker') {
+    header("Location: login.php");
+    exit;
+}
+
+$worker_id = $_SESSION['user_id'];
+
+// Fetch the worker's assigned category from the users table
+$query = "SELECT assigned_category FROM users WHERE user_id = ?";
+$stmt = $conn->prepare($query);
+$stmt->bind_param("i", $worker_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$row = $result->fetch_assoc();
+$worker_category = $row['assigned_category'] ?? null;
+
+if (!$worker_category) {
+    die("Error: No category assigned to this worker.");
+}
+
+// Fetch products under the worker's assigned category
+$product_query = "SELECT product_id, name FROM products WHERE category = ?";
+$stmt = $conn->prepare($product_query);
+$stmt->bind_param("s", $worker_category);
+$stmt->execute();
+$products_result = $stmt->get_result();
+$products = []; // Initialize array to store products
+while ($product = $products_result->fetch_assoc()) {
+    $products[] = $product;
 }
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Retrieve product_id from form submission
+    $product_id = $_POST['product_id'] ?? null;
+    if (!$product_id) {
+        die("Product selection is required.");
+    }
+
+    // Fetch the rack ID for the selected product
+    $query = "SELECT rack_id FROM rack WHERE product_id = ?";
+    $stmt = $conn->prepare($query);
+    $stmt->bind_param("i", $product_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result->fetch_assoc();
+    $rack_id = $row['rack_id'] ?? null;
+
+    if (!$rack_id) {
+        die("Rack not found for this product.");
+    }
+
     // Retrieve the requested quantity from the form
     $quantity = $_POST['quantity'] ?? 0;
     
@@ -43,9 +89,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $y = 20 + $row * 40;
         
         // Create QR code
-        $qrCode = new QrCode($rack_id);
+        $qrCode = new QrCode("Product ID: $product_id, Rack ID: $rack_id");
         $writer = new PngWriter();
-        
         $qrCodeImageData = $writer->write($qrCode);
         
         $file_name = tempnam(sys_get_temp_dir(), 'qr_code_') . '.png';
@@ -137,11 +182,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="card">
                     <div class="card-body p-4">
                         <h2 class="card-title text-center mb-4">Generate QR Codes</h2>
-                        <div class="alert alert-info">
-                            Rack ID: <strong><?= htmlspecialchars($rack_id) ?></strong>
-                        </div>
-                        
-                        <form method="POST" action="" class="needs-validation" novalidate>
+                        <form method="POST" action="generate_barcode.php" class="needs-validation" novalidate>
+                            <div class="mb-4">
+                                <label for="product_id" class="form-label">Select Product:</label>
+                                <select class="form-control" id="product_id" name="product_id" required>
+                                    <option value="">-- Select a Product --</option>
+                                    <?php foreach ($products as $product): ?>
+                                        <option value="<?= $product['product_id'] ?>"><?= htmlspecialchars($product['name']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
                             <div class="mb-4">
                                 <label for="quantity" class="form-label">Number of QR Codes needed:</label>
                                 <input type="number" 
@@ -189,3 +239,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </script>
 </body>
 </html>
+

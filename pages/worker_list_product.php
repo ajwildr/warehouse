@@ -48,37 +48,12 @@ if ($stmt) {
         body {
             background-color: var(--light-bg);
             min-height: 100vh;
-            padding-bottom: 60px; /* Space for bottom nav on mobile */
-        }
-
-        /* Back Button */
-        .back-button {
-            position: fixed;
-            top: 1rem;
-            left: 1rem;
-            z-index: 1000;
-            padding: 0.5rem 1rem;
-            background-color: var(--primary-color);
-            color: white;
-            border-radius: 50px;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
-
-        .back-button:hover {
-            background-color: var(--secondary-color);
-            color: white;
-            transform: translateX(-5px);
+            padding-bottom: 2rem;
         }
 
         /* Content Container */
         .content-container {
             padding: 2rem;
-            padding-top: 4rem; /* Space for back button */
         }
 
         /* Card Design */
@@ -88,12 +63,6 @@ if ($stmt) {
             padding: 1.5rem;
             margin-bottom: 1rem;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-            cursor: pointer;
-        }
-
-        .product-card:hover {
-            transform: translateY(-5px);
         }
 
         .product-card .title {
@@ -126,7 +95,6 @@ if ($stmt) {
 
         /* Responsive Table */
         .table-container {
-            display: none; /* Hidden on mobile */
             overflow-x: auto;
             background: white;
             border-radius: 1rem;
@@ -144,110 +112,68 @@ if ($stmt) {
             white-space: nowrap;
         }
 
-        .table tbody tr {
-            cursor: pointer;
-            transition: background-color 0.3s ease;
+        /* Search Section */
+        .search-box {
+            position: relative;
+            max-width: 400px;
+            margin-bottom: 1.5rem;
         }
 
-        .table tbody tr:hover {
-            background-color: rgba(52, 152, 219, 0.1);
+        .search-box .bi-search {
+            position: absolute;
+            top: 50%;
+            left: 1rem;
+            transform: translateY(-50%);
+            color: #6c757d;
         }
 
-        /* Bottom Navigation (Mobile) */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: white;
-            padding: 0.8rem;
-            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
-            display: flex;
-            justify-content: space-around;
-            z-index: 1000;
-        }
-
-        .bottom-nav a {
-            color: var(--dark-text);
-            text-decoration: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            font-size: 0.8rem;
-        }
-
-        .bottom-nav i {
-            font-size: 1.5rem;
-            margin-bottom: 0.2rem;
+        .search-input {
+            padding-left: 2.5rem;
+            border-radius: 2rem;
         }
 
         /* Responsive Breakpoints */
-        @media (min-width: 768px) {
-            .table-container {
-                display: block;
-            }
-
-            .product-cards {
-                display: none;
-            }
-
-            .bottom-nav {
-                display: none;
-            }
-
-            body {
-                padding-bottom: 2rem;
-            }
-        }
-
-        /* Loading Animation */
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid var(--primary-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 2rem auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Touch-friendly Adjustments */
         @media (max-width: 767px) {
+            .table-container {
+                display: none;
+            }
+            
             .product-card {
                 padding: 1rem;
-                min-height: 44px; /* Minimum touch target size */
             }
+        }
 
-            .bottom-nav a {
-                padding: 0.5rem;
-                min-width: 44px;
-                min-height: 44px;
+        @media (min-width: 768px) {
+            .product-cards {
+                display: none;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Back Button -->
-    <a href="worker_dashboard.php" class="back-button">
-        <i class="bi bi-arrow-left"></i>
-        <span>Back</span>
-    </a>
-
     <div class="content-container">
-        <h2 class="mb-4">Products in <?= htmlspecialchars($assigned_category) ?></h2>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Products in <?= htmlspecialchars($assigned_category) ?></h2>
+            <span class="badge bg-primary"><?= count($products) ?> Products</span>
+        </div>
+
+        <!-- Search -->
+        <div class="search-box">
+            <i class="bi bi-search"></i>
+            <input type="text" id="searchInput" class="form-control search-input" placeholder="Search products...">
+        </div>
 
         <!-- Mobile Product Cards -->
         <div class="product-cards">
             <?php if (!empty($products)): ?>
                 <?php foreach ($products as $product): ?>
-                    <div class="product-card" onclick="window.location.href='rack_details.php?product_id=<?= $product['product_id'] ?>'">
+                    <div class="product-card" data-product-id="<?= $product['product_id'] ?>">
                         <div class="title"><?= htmlspecialchars($product['name']) ?></div>
                         <div class="details">
+                            <div class="detail-item">
+                                <span class="label">ID</span>
+                                <span class="value"><?= htmlspecialchars($product['product_id']) ?></span>
+                            </div>
                             <div class="detail-item">
                                 <span class="label">Stock</span>
                                 <span class="value"><?= htmlspecialchars($product['current']) ?></span>
@@ -273,12 +199,11 @@ if ($stmt) {
         <!-- Desktop Table View -->
         <div class="table-container">
             <?php if (!empty($products)): ?>
-                <table class="table">
+                <table class="table" id="productsTable">
                     <thead>
                         <tr>
                             <th>ID</th>
                             <th>Name</th>
-                            <th>Category</th>
                             <th>Supplier</th>
                             <th>Current Stock</th>
                             <th>Min Limit</th>
@@ -288,10 +213,9 @@ if ($stmt) {
                     </thead>
                     <tbody>
                         <?php foreach ($products as $product): ?>
-                            <tr onclick="window.location.href='rack_details.php?product_id=<?= $product['product_id'] ?>'">
+                            <tr data-product-id="<?= $product['product_id'] ?>">
                                 <td><?= htmlspecialchars($product['product_id']) ?></td>
                                 <td><?= htmlspecialchars($product['name']) ?></td>
-                                <td><?= htmlspecialchars($product['category']) ?></td>
                                 <td><?= htmlspecialchars($product['supplier_id']) ?></td>
                                 <td><?= htmlspecialchars($product['current']) ?></td>
                                 <td><?= htmlspecialchars($product['min_limit']) ?></td>
@@ -305,26 +229,31 @@ if ($stmt) {
         </div>
     </div>
 
-    <!-- Bottom Navigation (Mobile) -->
-    <nav class="bottom-nav">
-        <a href="worker_dashboard.php">
-            <i class="bi bi-house-door"></i>
-            <span>Home</span>
-        </a>
-        <a href="scan_barcode.php">
-            <i class="bi bi-upc-scan"></i>
-            <span>Scan</span>
-        </a>
-        <a href="#" class="active">
-            <i class="bi bi-box-seam"></i>
-            <span>Products</span>
-        </a>
-        <a href="../logout.php">
-            <i class="bi bi-box-arrow-right"></i>
-            <span>Logout</span>
-        </a>
-    </nav>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Search functionality
+        document.getElementById('searchInput').addEventListener('keyup', function() {
+            const searchValue = this.value.toLowerCase();
+            filterProducts(searchValue);
+        });
+
+        function filterProducts(searchValue) {
+            // Get all product cards and table rows
+            const cards = document.querySelectorAll('.product-card');
+            const rows = document.querySelectorAll('#productsTable tbody tr');
+
+            // Filter the cards (mobile view)
+            cards.forEach(card => {
+                const title = card.querySelector('.title').innerText.toLowerCase();
+                card.style.display = title.includes(searchValue) ? '' : 'none';
+            });
+
+            // Filter the table rows (desktop view)
+            rows.forEach(row => {
+                const name = row.cells[1].innerText.toLowerCase();
+                row.style.display = name.includes(searchValue) ? '' : 'none';
+            });
+        }
+    </script>
 </body>
 </html>

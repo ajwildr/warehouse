@@ -56,6 +56,20 @@ $stmt = $conn->prepare($query);
 $stmt->bind_param("s", $assigned_category);
 $stmt->execute();
 $recent_movements = $stmt->get_result();
+
+// Fetch tasks assigned by the manager
+
+$manager_id = $_SESSION['user_id'];
+
+$query = "SELECT t.task_id, u.username AS worker_name, t.description, t.status, t.created_at 
+          FROM tasks t 
+          JOIN users u ON t.assigned_to = u.user_id 
+          WHERE t.assigned_by = ?";
+$stmt = $conn->prepare($query);
+$stmt->bind_param("i", $manager_id);
+$stmt->execute();
+$tasks = $stmt->get_result();
+
 ?>
 
 <!DOCTYPE html>
@@ -211,6 +225,17 @@ $recent_movements = $stmt->get_result();
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link" href="manage_products.php">
+                        <i class="bi bi-box-seam me-2"></i> Manage Products
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="assign_task.php">
+                        <i class="bi bi-list-check me-2"></i> Assign Tasks
+                    </a>
+                </li>
+
+                <li class="nav-item">
                     <a class="nav-link" href="manage_racks.php">
                         <i class="bi bi-grid-3x3-gap me-2"></i> Manage Racks
                     </a>
@@ -220,11 +245,7 @@ $recent_movements = $stmt->get_result();
                         <i class="bi bi-upc-scan me-2"></i> Generate Barcodes
                     </a>
                 </li> -->
-                <li class="nav-item">
-                    <a class="nav-link" href="manage_products.php">
-                        <i class="bi bi-box-seam me-2"></i> Manage Products
-                    </a>
-                </li>
+                
                 <li class="nav-item">
                     <a class="nav-link" href="admin_manager_scan.php">
                         <i class="bi bi-qr-code-scan me-2"></i> Scan
@@ -330,7 +351,36 @@ $recent_movements = $stmt->get_result();
                 </table>
             </div>
         </div>
+
+        <div class="activity-card">
+            <h5 class="card-title mb-4">Assigned Tasks</h5>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Worker</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                            <th>Created At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php while ($task = $tasks->fetch_assoc()): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($task['worker_name']) ?></td>
+                                <td><?= htmlspecialchars($task['description']) ?></td>
+                                <td><?= htmlspecialchars($task['status']) ?></td>
+                                <td><?= htmlspecialchars($task['created_at']) ?></td>
+                            </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
+
+  
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>

@@ -218,12 +218,7 @@ if (isset($_POST['send_email'])) {
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>Low Stock Products</h1>
-            <a href="admin_dashboard.php" class="back-button">
-                <i class="fas fa-arrow-left"></i> Back to Dashboard
-            </a>
-        </div>
+        
 
         <div class="cards-grid">
             <?php foreach ($products as $product): ?>
@@ -246,10 +241,10 @@ if (isset($_POST['send_email'])) {
                     <p>Supplier: <?= htmlspecialchars($product['supplier_name']) ?></p>
                     
                     <?php if ($product['supplier_email']): ?>
-                        <button class="email-button" onclick="openEmailModal('<?= htmlspecialchars($product['product_name']) ?>', '<?= htmlspecialchars($product['supplier_email']) ?>', <?= $product['current'] ?>, <?= $product['min_limit'] ?>)">
+                        <button class="email-button" onclick="openEmailModal('<?= htmlspecialchars($product['product_name']) ?>', '<?= htmlspecialchars($product['supplier_email']) ?>' , <?= $product['current'] ?>, <?= $product['min_limit'] ?>)">
                             <i class="fas fa-envelope"></i> Contact Supplier
-                        </button>
-                    <?php endif; ?>
+                        </button> 
+                    <?php endif;  ?>
                 </div>
             <?php endforeach; ?>
         </div>

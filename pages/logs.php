@@ -54,6 +54,35 @@ $chart_data = [];
 while ($row = $daily_result->fetch_assoc()) {
     $chart_data[] = $row;
 }
+
+// Fetch top products by movement
+$top_products_query = "
+    SELECT 
+        p.name AS product_name,
+        SUM(CASE WHEN s.transaction_type = 'Incoming' THEN s.quantity ELSE 0 END) as incoming,
+        SUM(CASE WHEN s.transaction_type = 'Outgoing' THEN s.quantity ELSE 0 END) as outgoing
+    FROM stock s
+    INNER JOIN products p ON s.product_id = p.product_id
+    WHERE s.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+    GROUP BY s.product_id
+    ORDER BY (SUM(s.quantity)) DESC
+    LIMIT 10
+";
+$top_products_result = $conn->query($top_products_query);
+$product_movement_data = [];
+while ($row = $top_products_result->fetch_assoc()) {
+    $product_movement_data[] = $row;
+}
+
+// Fetch stock status distribution - simplified to only low stock and optimal
+$stock_status_query = "
+    SELECT 
+        SUM(CASE WHEN current >= min_limit THEN 1 ELSE 0 END) as optimal,
+        SUM(CASE WHEN current < min_limit THEN 1 ELSE 0 END) as low_stock
+    FROM products
+";
+$stock_status_result = $conn->query($stock_status_query);
+$stock_status_data = $stock_status_result->fetch_assoc();
 ?>
 
 <!DOCTYPE html>
@@ -148,7 +177,7 @@ while ($row = $daily_result->fetch_assoc()) {
                 <div class="card stat-card bg-primary text-white">
                     <div class="card-body">
                         <h5 class="card-title">Total Transactions</h5>
-                        <h2><?= number_format($stats['total_transactions']) ?></h2>
+                        <h2><?= number_format($stats['total_transactions'] ?? 0 ) ?></h2>
                         <p class="mb-0">Last 30 days</p>
                     </div>
                 </div>
@@ -157,7 +186,7 @@ while ($row = $daily_result->fetch_assoc()) {
                 <div class="card stat-card bg-success text-white">
                     <div class="card-body">
                         <h5 class="card-title">Total Incoming</h5>
-                        <h2><?= number_format($stats['total_incoming']) ?></h2>
+                        <h2><?= number_format($stats['total_incoming'] ?? 0 ) ?></h2>
                         <p class="mb-0">Units received</p>
                     </div>
                 </div>
@@ -166,7 +195,7 @@ while ($row = $daily_result->fetch_assoc()) {
                 <div class="card stat-card bg-danger text-white">
                     <div class="card-body">
                         <h5 class="card-title">Total Outgoing</h5>
-                        <h2><?= number_format($stats['total_outgoing']) ?></h2>
+                        <h2><?= number_format($stats['total_outgoing'] ?? 0 ) ?></h2>
                         <p class="mb-0">Units dispatched</p>
                     </div>
                 </div>
@@ -175,7 +204,7 @@ while ($row = $daily_result->fetch_assoc()) {
                 <div class="card stat-card bg-info text-white">
                     <div class="card-body">
                         <h5 class="card-title">Products Moved</h5>
-                        <h2><?= number_format($stats['products_moved']) ?></h2>
+                        <h2><?= number_format($stats['products_moved'] ?? 0 ) ?></h2>
                         <p class="mb-0">Unique products</p>
                     </div>
                 </div>
@@ -187,6 +216,14 @@ while ($row = $daily_result->fetch_assoc()) {
             <div class="card-body">
                 <h4 class="card-title mb-4">Stock Movement Trends</h4>
                 <div id="stockChart" style="height: 300px;"></div>
+            </div>
+        </div>
+
+        <!-- Additional Chart - Top Products -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h4 class="card-title mb-4">Top Products by Movement</h4>
+                <div id="productMovementChart" style="height: 350px;"></div>
             </div>
         </div>
 
@@ -235,8 +272,6 @@ while ($row = $daily_result->fetch_assoc()) {
                                         <?php
                                         if ($row['current_stock'] <= $row['min_limit']) {
                                             echo '<span class="badge bg-danger">Low Stock</span>';
-                                        } elseif ($row['current_stock'] >= $row['max_limit']) {
-                                            echo '<span class="badge bg-warning">Overstocked</span>';
                                         } else {
                                             echo '<span class="badge bg-success">Optimal</span>';
                                         }
@@ -259,57 +294,151 @@ while ($row = $daily_result->fetch_assoc()) {
         </div>
     </div>
 
+    <!-- Hidden data for charts -->
+    <script type="application/json" id="chartData">
+        <?= json_encode($chart_data) ?>
+    </script>
+    <script type="application/json" id="productMovementData">
+        <?= json_encode($product_movement_data) ?>
+    </script>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script>
-        // Chart initialization
-        const chartData = <?= json_encode($chart_data) ?>;
-        
-        const options = {
-            series: [{
-                name: 'Incoming',
-                data: chartData.map(item => ({ x: item.date, y: item.incoming }))
-            }, {
-                name: 'Outgoing',
-                data: chartData.map(item => ({ x: item.date, y: item.outgoing }))
-            }],
-            chart: {
-                type: 'area',
-                height: 300,
-                toolbar: {
-                    show: false
-                }
-            },
-            dataLabels: {
-                enabled: false
-            },
-            stroke: {
-                curve: 'smooth',
-                width: 2
-            },
-            colors: ['#2ecc71', '#e74c3c'],
-            fill: {
-                type: 'gradient',
-                gradient: {
-                    opacityFrom: 0.6,
-                    opacityTo: 0.1
-                }
-            },
-            xaxis: {
-                type: 'datetime'
-            },
-            tooltip: {
-                shared: true,
-                y: {
-                    formatter: function (value) {
-                        return value + ' units';
+        // Initialize charts on document load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Parse data from hidden elements
+            const chartData = JSON.parse(document.getElementById('chartData').textContent);
+            const productMovementData = JSON.parse(document.getElementById('productMovementData').textContent);
+            
+            // 1. MAIN STOCK MOVEMENT CHART
+            const stockChartOptions = {
+                series: [{
+                    name: 'Incoming',
+                    data: chartData.map(item => ({ x: new Date(item.date).getTime(), y: parseInt(item.incoming) }))
+                }, {
+                    name: 'Outgoing',
+                    data: chartData.map(item => ({ x: new Date(item.date).getTime(), y: parseInt(item.outgoing) }))
+                }],
+                chart: {
+                    type: 'area',
+                    height: 300,
+                    toolbar: {
+                        show: true
+                    },
+                    animations: {
+                        enabled: true
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                stroke: {
+                    curve: 'smooth',
+                    width: [3, 3, 4],
+                    dashArray: [0, 0, 5]
+                },
+                colors: ['#2ecc71', '#e74c3c'],
+                fill: {
+                    type: ['gradient', 'gradient', 'solid'],
+                    gradient: {
+                        shade: 'light',
+                        type: 'vertical',
+                        opacityFrom: 0.7,
+                        opacityTo: 0.2
+                    }
+                },
+                xaxis: {
+                    type: 'datetime',
+                    labels: {
+                        format: 'MMM dd'
+                    },
+                    title: {
+                        text: 'Date'
+                    }
+                },
+                yaxis: {
+                    title: {
+                        text: 'Units'
+                    }
+                },
+                legend: {
+                    position: 'top'
+                },
+                tooltip: {
+                    shared: true,
+                    y: {
+                        formatter: function(value) {
+                            return Math.abs(value) + ' units';
+                        }
                     }
                 }
-            }
-        };
+            };
+            
+            const stockChart = new ApexCharts(document.querySelector("#stockChart"), stockChartOptions);
+            stockChart.render();
+            
+            // 2. TOP PRODUCTS BY MOVEMENT CHART
+            const productChartOptions = {
+                series: [{
+                    name: 'Incoming',
+                    data: productMovementData.map(item => parseInt(item.incoming))
+                }, {
+                    name: 'Outgoing',
+                    data: productMovementData.map(item => parseInt(item.outgoing))
+                }],
+                chart: {
+                    type: 'bar',
+                    height: 350,
+                    stacked: false
+                },
+                plotOptions: {
+                    bar: {
+                        horizontal: false,
+                        columnWidth: '55%',
+                        borderRadius: 2
+                    }
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                stroke: {
+                    show: true,
+                    width: 2,
+                    colors: ['transparent']
+                },
+                colors: ['#2ecc71', '#e74c3c'],
+                xaxis: {
+                    categories: productMovementData.map(item => item.product_name),
+                    labels: {
+                        rotate: -45,
+                        rotateAlways: true,
+                        maxHeight: 60
+                    }
+                },
+                yaxis: {
+                    title: {
+                        text: 'Units'
+                    }
+                },
+                fill: {
+                    opacity: 1
+                },
+                legend: {
+                    position: 'top'
+                },
+                tooltip: {
+                    y: {
+                        formatter: function(val) {
+                            return val + " units";
+                        }
+                    }
+                }
+            };
 
-        const chart = new ApexCharts(document.querySelector("#stockChart"), options);
-        chart.render();
+            const productChart = new ApexCharts(document.querySelector("#productMovementChart"), productChartOptions);
+            productChart.render();
+        });
 
         // Export to CSV function
         function exportToCSV() {

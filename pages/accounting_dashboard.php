@@ -28,244 +28,331 @@ $outgoing_query = "SELECT COUNT(*) as total, SUM(quantity) as qty FROM stock
 $outgoing_result = $conn->query($outgoing_query);
 $outgoing_data = $outgoing_result->fetch_assoc();
 $outgoing_today = $outgoing_data['qty'] ?? 0;
+
+// Get recent stock activities
+$recent_query = "SELECT s.*, p.name as product_name 
+                FROM stock s 
+                INNER JOIN products p ON s.product_id = p.product_id 
+                ORDER BY s.created_at DESC LIMIT 5";
+$recent_result = $conn->query($recent_query);
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CloudWare - Accounting Dashboard</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
     <style>
         :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #34495e;
-            --accent-color: #3498db;
-            --success-color: #2ecc71;
-            --warning-color: #f1c40f;
-            --danger-color: #e74c3c;
-            --light-bg: #f8f9fa;
-            --dark-bg: #343a40;
+            --primary-color: #2C3E50;
+            --secondary-color: #34495E;
+            --accent-color: #3498DB;
+            --success-color: #2ECC71;
+            --warning-color: #F1C40F;
+            --danger-color: #E74C3C;
+            --light-bg: #ECF0F1;
+            --dark-text: #2C3E50;
+            --light-text: #ECF0F1;
         }
 
-        /* Base Styles */
         body {
             background-color: var(--light-bg);
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            min-height: 100vh;
+            display: flex;
         }
 
-        /* Sidebar Styles */
+        /* Sidebar */
         .sidebar {
-            background: var(--primary-color);
-            min-height: 100vh;
-            transition: all 0.3s;
+            background-color: var(--primary-color);
+            color: var(--light-text);
+            width: 250px;
+            position: fixed;
+            height: 100vh;
+            padding: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 1rem 0;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
         .sidebar .nav-link {
-            color: #fff;
+            color: var(--light-text);
             padding: 0.8rem 1rem;
             margin: 0.2rem 0;
-            border-radius: 0.25rem;
-            transition: all 0.3s;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
         }
 
         .sidebar .nav-link:hover {
-            background: var(--secondary-color);
+            background-color: var(--secondary-color);
+            padding-left: 1.5rem;
         }
 
-        .sidebar .nav-link i {
-            margin-right: 0.5rem;
+        .sidebar .nav-link.active {
+            background-color: var(--accent-color);
         }
 
-        /* Main Content Styles */
+        /* Main Content */
         .main-content {
+            margin-left: 250px;
+            width: calc(100% - 250px);
             padding: 2rem;
+            transition: all 0.3s ease;
         }
 
-        .dashboard-card {
-            background: #fff;
+        /* Cards */
+        .stat-card {
+            background: white;
             border-radius: 1rem;
-            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-            transition: transform 0.3s;
-            cursor: pointer;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+            height: 100%;
         }
 
-        .dashboard-card:hover {
+        .stat-card:hover {
             transform: translateY(-5px);
         }
 
-        .stat-card {
-            padding: 1.5rem;
-            border-radius: 1rem;
-            color: #fff;
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
         }
 
-        /* Mobile Optimizations */
+        /* Quick Actions */
+        .quick-action {
+            background: white;
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: none;
+            margin-bottom: 1rem;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: var(--dark-text);
+        }
+
+        .quick-action:hover {
+            transform: translateY(-5px);
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .quick-action i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Activity Card */
+        .activity-card {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 2rem;
+        }
+
+        /* Mobile Responsive */
         @media (max-width: 768px) {
             .sidebar {
-                position: fixed;
-                top: 0;
-                left: -100%;
-                z-index: 1000;
-                width: 80%;
-                max-width: 300px;
+                margin-left: -250px;
             }
 
             .sidebar.active {
-                left: 0;
+                margin-left: 0;
             }
 
             .main-content {
-                padding: 1rem;
+                margin-left: 0;
+                width: 100%;
             }
 
-            .mobile-nav {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                background: var(--primary-color);
-                padding: 0.5rem;
-                z-index: 999;
-            }
-        }
-
-        /* Touch-friendly Elements */
-        @media (max-width: 1024px) {
-            .nav-link, .btn {
-                min-height: 44px;
-                display: flex;
-                align-items: center;
+            .main-content.active {
+                margin-left: 250px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 px-0 sidebar">
-                <div class="d-flex flex-column p-3">
-                    <h4 class="text-white mb-4">CloudWare</h4>
-                    <nav class="nav flex-column">
-                        <a class="nav-link active" href="#"><i class="bi bi-speedometer2"></i> Dashboard</a>
-                        <a class="nav-link" href="incoming_stock.php"><i class="bi bi-box-arrow-in-down"></i> Incoming Stock</a>
-                        <a class="nav-link" href="outgoing_stock.php"><i class="bi bi-box-arrow-up"></i> Outgoing Stock</a>
-                        <a class="nav-link" href="logs.php"><i class="bi bi-journal-text"></i> Stock Logs</a>
-                    </nav>
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            CloudWare
+        </div>
+        <div class="mt-4">
+            <div class="text-center mb-4">
+                <i class="bi bi-person-circle" style="font-size: 3rem;"></i>
+                <h6 class="mt-2 mb-0"><?= htmlspecialchars($_SESSION['username']) ?></h6>
+                <small>Accounting</small>
+            </div>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="accounting_dashboard.php">
+                        <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="incoming_stock.php">
+                        <i class="bi bi-box-arrow-in-down me-2"></i> Incoming Stock
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="outgoing_stock.php">
+                        <i class="bi bi-box-arrow-up me-2"></i> Outgoing Stock
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="logs.php">
+                        <i class="bi bi-journal-text me-2"></i> Stock Logs
+                    </a>
+                </li>
+                <li class="nav-item mt-auto">
+                    <a class="nav-link text-danger" href="../logout.php">
+                        <i class="bi bi-box-arrow-right me-2"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Navigation -->
+        <nav class="navbar navbar-expand-lg navbar-light bg-white rounded mb-4 shadow-sm">
+            <div class="container-fluid">
+                <button class="btn d-md-none" id="sidebar-toggle">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div class="ms-auto d-flex align-items-center">
+                    <span class="me-3">
+                        <i class="bi bi-calendar-date me-1"></i> <?= date('F d, Y') ?>
+                    </span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Quick Actions Grid -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <a href="incoming_stock.php" class="quick-action shadow">
+                        <i class="bi bi-box-arrow-in-down text-primary"></i>
+                        <h4>Incoming Stock</h4>
+                        <p class="mb-0">Record new inventory arrivals</p>
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <a href="outgoing_stock.php" class="quick-action shadow">
+                        <i class="bi bi-box-arrow-up text-success"></i>
+                        <h4>Outgoing Stock</h4>
+                        <p class="mb-0">Record inventory dispatches and transfers</p>
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <a href="logs.php" class="quick-action shadow">
+                        <i class="bi bi-journal-text text-warning"></i>
+                        <h4>Stock Logs</h4>
+                        <p class="mb-0">Past inventory transactions and updates</p>
+                    </a>
+                </div>
+            </div>
+        <!-- Statistics -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-icon text-primary">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
+                    <h3 class="mb-2"><?= $total_stock ?></h3>
+                    <p class="text-muted mb-0">Active Products in Stock</p>
                 </div>
             </div>
 
-            <!-- Main Content -->
-            <div class="col-md-9 col-lg-10 main-content">
-                <!-- Top Navigation -->
-                <nav class="navbar navbar-expand-lg navbar-light bg-white rounded-3 mb-4 p-3">
-                    <div class="container-fluid">
-                        <button class="navbar-toggler d-md-none" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu">
-                            <span class="navbar-toggler-icon"></span>
-                        </button>
-                        <div class="d-flex align-items-center">
-                            <div class="dropdown">
-                                <button class="btn btn-link dropdown-toggle text-dark text-decoration-none" type="button" id="userMenu" data-bs-toggle="dropdown">
-                                    <i class="bi bi-person-circle"></i>
-                                    <?= htmlspecialchars($_SESSION['username']) ?>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="../logout.php">Logout</a></li>
-                                </ul>
-                            </div>
-                        </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-icon text-success">
+                        <i class="bi bi-box-arrow-in-down"></i>
                     </div>
-                </nav>
+                    <h3 class="mb-2"><?= $incoming_today ?></h3>
+                    <p class="text-muted mb-0">Incoming Stock Today</p>
+                </div>
+            </div>
 
-                <!-- Dashboard Content -->
-                <div class="row g-4">
-                    <!-- Stats Cards -->
-                    <div class="col-md-4">
-                        <div class="stat-card dashboard-card bg-primary">
-                            <h3>Total Stock Items</h3>
-                            <h2 class="mb-0"><?= $total_stock ?></h2>
-                            <small>Active Products</small>
-                        </div>
+            <div class="col-md-4">
+                <div class="stat-card">
+                    <div class="stat-icon text-warning">
+                        <i class="bi bi-box-arrow-up"></i>
                     </div>
-                    <div class="col-md-4">
-                        <div class="stat-card dashboard-card bg-success">
-                            <h3>Incoming Today</h3>
-                            <h2 class="mb-0"><?= $incoming_today ?></h2>
-                            <small>Units Received</small>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="stat-card dashboard-card bg-warning">
-                            <h3>Outgoing Today</h3>
-                            <h2 class="mb-0"><?= $outgoing_today ?></h2>
-                            <small>Units Dispatched</small>
-                        </div>
-                    </div>
-
-                    <!-- Quick Actions -->
-                    <div class="col-12">
-                        <div class="dashboard-card p-4">
-                            <h3>Quick Actions</h3>
-                            <div class="row g-3 mt-2">
-                                <div class="col-md-4">
-                                    <a href="incoming_stock.php" class="btn btn-primary w-100">
-                                        <i class="bi bi-plus-circle"></i> New Stock Entry
-                                    </a>
-                                </div>
-                                <div class="col-md-4">
-                                    <a href="outgoing_stock.php" class="btn btn-success w-100">
-                                        <i class="bi bi-arrow-right-circle"></i> Record Outgoing
-                                    </a>
-                                </div>
-                                <div class="col-md-4">
-                                    <a href="logs.php" class="btn btn-info w-100">
-                                        <i class="bi bi-file-text"></i> View Reports
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <h3 class="mb-2"><?= $outgoing_today ?></h3>
+                    <p class="text-muted mb-0">Outgoing Stock Today</p>
                 </div>
             </div>
         </div>
 
-        <!-- Mobile Navigation -->
-        <div class="mobile-nav d-md-none">
-            <div class="row text-center">
-                <div class="col">
-                    <a href="#" class="text-white"><i class="bi bi-house-door"></i></a>
-                </div>
-                <div class="col">
-                    <a href="incoming_stock.php" class="text-white"><i class="bi bi-box-arrow-in-down"></i></a>
-                </div>
-                <div class="col">
-                    <a href="outgoing_stock.php" class="text-white"><i class="bi bi-box-arrow-up"></i></a>
-                </div>
-                <div class="col">
-                    <a href="logs.php" class="text-white"><i class="bi bi-journal-text"></i></a>
-                </div>
+        <!-- Recent Activity -->
+        <div class="activity-card">
+            <h5 class="card-title mb-4">Recent Stock Activities</h5>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php while ($activity = $recent_result->fetch_assoc()): ?>
+                            <tr>
+                                <td><?= htmlspecialchars($activity['product_name']) ?></td>
+                                <td>
+                                    <span class="badge bg-<?= $activity['transaction_type'] === 'Incoming' ? 'success' : 'warning' ?>">
+                                        <?= $activity['transaction_type'] ?>
+                                    </span>
+                                </td>
+                                <td><?= $activity['quantity'] ?></td>
+                                <td><?= date('M d, Y H:i', strtotime($activity['created_at'])) ?></td>
+                            </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
             </div>
         </div>
+
+        
     </div>
 
-    <!-- Bootstrap Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // Mobile sidebar toggle
-        document.querySelector('.navbar-toggler').addEventListener('click', function() {
+        document.getElementById('sidebar-toggle').addEventListener('click', function() {
             document.querySelector('.sidebar').classList.toggle('active');
+            document.querySelector('.main-content').classList.toggle('active');
         });
 
-        // Close sidebar when clicking outside
-        document.addEventListener('click', function(event) {
+        // Close sidebar on mobile when clicking outside
+        document.addEventListener('click', function(e) {
             const sidebar = document.querySelector('.sidebar');
-            const toggler = document.querySelector('.navbar-toggler');
-            if (!sidebar.contains(event.target) && !toggler.contains(event.target)) {
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            
+            if (window.innerWidth <= 768 && 
+                !sidebar.contains(e.target) && 
+                !sidebarToggle.contains(e.target)) {
                 sidebar.classList.remove('active');
+                document.querySelector('.main-content').classList.remove('active');
             }
         });
     </script>

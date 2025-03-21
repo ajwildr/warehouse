@@ -27,6 +27,13 @@ foreach ($statsQueries as $query => $key) {
     $result = $conn->query($query);
     $stats[$key] = $result->fetch_assoc()['total'];
 }
+
+// Fetch recent activities (similar to worker dashboard)
+$query = "SELECT s.*, p.name as product_name 
+          FROM stock s 
+          INNER JOIN products p ON s.product_id = p.product_id 
+          ORDER BY s.created_at DESC LIMIT 5";
+$recent_activities = $conn->query($query);
 ?>
 
 <!DOCTYPE html>
@@ -50,28 +57,36 @@ foreach ($statsQueries as $query => $key) {
             --light-text: #ECF0F1;
         }
 
-        /* Base Styles */
         body {
             background-color: var(--light-bg);
-            color: var(--dark-text);
             min-height: 100vh;
             display: flex;
         }
 
-        /* Sidebar Styles */
+        /* Sidebar */
         .sidebar {
             background-color: var(--primary-color);
             color: var(--light-text);
             width: 250px;
             position: fixed;
             height: 100vh;
+            padding: 1rem;
             transition: all 0.3s ease;
-            z-index: 1000;
+        }
+
+        .sidebar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 1rem 0;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
 
         .sidebar .nav-link {
             color: var(--light-text);
             padding: 0.8rem 1rem;
+            margin: 0.2rem 0;
+            border-radius: 0.5rem;
             transition: all 0.3s ease;
         }
 
@@ -80,50 +95,73 @@ foreach ($statsQueries as $query => $key) {
             padding-left: 1.5rem;
         }
 
-        .sidebar .nav-link i {
-            margin-right: 10px;
+        .sidebar .nav-link.active {
+            background-color: var(--accent-color);
         }
 
-        /* Main Content Styles */
+        /* Main Content */
         .main-content {
             margin-left: 250px;
             width: calc(100% - 250px);
-            padding: 20px;
+            padding: 2rem;
             transition: all 0.3s ease;
         }
 
-        /* Card Styles */
+        /* Cards */
         .stat-card {
             background: white;
-            border-radius: 10px;
-            padding: 20px;
+            border-radius: 1rem;
+            padding: 1.5rem;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s ease;
+            height: 100%;
         }
 
         .stat-card:hover {
             transform: translateY(-5px);
         }
 
-        .stat-card i {
+        .stat-icon {
             font-size: 2rem;
-            margin-bottom: 10px;
+            margin-bottom: 1rem;
         }
 
-        /* Notification Badge */
-        .notification-badge {
-            position: relative;
-            display: inline-block;
+        /* Quick Actions */
+        .quick-action {
+            background: white;
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: none;
+            margin-bottom: 0.5rem;
+            min-height: 150px; /* Reduced from 200px */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: var(--dark-text);
         }
 
-        .badge {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            padding: 4px 8px;
-            border-radius: 50%;
-            background: var(--danger-color);
+        .quick-action:hover {
+            transform: translateY(-5px);
+            background-color: var(--accent-color);
             color: white;
+        }
+
+        .quick-action i {
+            font-size: 2.25rem; /* Reduced from 3rem */
+            margin-bottom: 0.75rem;
+        }
+
+        /* Activity Card */
+        .activity-card {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 2rem;
         }
 
         /* Mobile Responsive */
@@ -144,71 +182,55 @@ foreach ($statsQueries as $query => $key) {
             .main-content.active {
                 margin-left: 250px;
             }
-
-            .toggle-sidebar {
-                display: block !important;
-            }
-        }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--light-bg);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--secondary-color);
-            border-radius: 4px;
-        }
-
-        /* Animation */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease forwards;
         }
     </style>
 </head>
 <body>
     <!-- Sidebar -->
     <nav class="sidebar">
-        <div class="p-3">
-            <h3 class="text-center mb-4">CloudWare</h3>
+        <div class="sidebar-brand">
+            CloudWare
+        </div>
+        <div class="mt-4">
+            <div class="text-center mb-4">
+                <i class="bi bi-person-circle" style="font-size: 3rem;"></i>
+                <h6 class="mt-2 mb-0"><?= htmlspecialchars($_SESSION['username']) ?></h6>
+                <small>Administrator</small>
+            </div>
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a href="admin_dashboard.php" class="nav-link active">
-                        <i class="bi bi-speedometer2"></i> Dashboard
+                    <a class="nav-link active" href="admin_dashboard.php">
+                        <i class="bi bi-speedometer2 me-2"></i> Dashboard
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="manage_users.php" class="nav-link">
-                        <i class="bi bi-people"></i> Users
+                    <a class="nav-link" href="manage_users.php">
+                        <i class="bi bi-people me-2"></i> Users
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="manage_suppliers.php" class="nav-link">
-                        <i class="bi bi-truck"></i> Suppliers
+                    <a class="nav-link" href="manage_suppliers.php">
+                        <i class="bi bi-truck me-2"></i> Suppliers
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="admin_manage_products.php" class="nav-link">
-                        <i class="bi bi-box"></i> Products
+                    <a class="nav-link" href="admin_manage_products.php">
+                        <i class="bi bi-box-seam me-2"></i> Products
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="manage_category.php" class="nav-link">
-                        <i class="bi bi-tags"></i> Categories
+                    <a class="nav-link" href="manage_category.php">
+                        <i class="bi bi-tags me-2"></i> Categories
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="admin_manager_scan.php" class="nav-link">
-                        <i class="bi bi-qr-code-scan"></i> Scan
+                    <a class="nav-link" href="admin_manager_scan.php">
+                        <i class="bi bi-qr-code-scan me-2"></i> Scan
+                    </a>
+                </li>
+                <li class="nav-item mt-auto">
+                    <a class="nav-link text-danger" href="../logout.php">
+                        <i class="bi bi-box-arrow-right me-2"></i> Logout
                     </a>
                 </li>
             </ul>
@@ -220,109 +242,172 @@ foreach ($statsQueries as $query => $key) {
         <!-- Top Navigation -->
         <nav class="navbar navbar-expand-lg navbar-light bg-white rounded mb-4 shadow-sm">
             <div class="container-fluid">
-                <button class="btn toggle-sidebar d-md-none">
+                <button class="btn d-md-none" id="sidebar-toggle">
                     <i class="bi bi-list"></i>
                 </button>
-                <div class="d-flex align-items-center">
-                    <div class="notification-badge me-3">
-                        <a href="low_stock_notifications.php" class="text-dark">
-                            <i class="bi bi-bell fs-5"></i>
-                            <?php if ($notificationCount > 0): ?>
-                                <span class="badge"><?= $notificationCount ?></span>
-                            <?php endif; ?>
-                        </a>
-                    </div>
-                    <div class="dropdown">
-                        <button class="btn dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown">
-                            <i class="bi bi-person-circle"></i> <?= htmlspecialchars($_SESSION['username']) ?>
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="profile.php">Profile</a></li>
-                            <li><a class="dropdown-item" href="settings.php">Settings</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="../logout.php">Logout</a></li>
-                        </ul>
-                    </div>
+                <div class="ms-auto d-flex align-items-center">
+                    <!-- Notifications -->
+                    <a href="low_stock_notifications.php" class="btn btn-outline-primary position-relative me-3">
+                        <i class="bi bi-bell-fill"></i>
+                        <?php if ($notificationCount > 0): ?>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                <?= $notificationCount ?>
+                            </span>
+                        <?php endif; ?>
+                    </a>
+                    
                 </div>
             </div>
         </nav>
 
-        <!-- Dashboard Content -->
-        <div class="container-fluid animate-fade-in">
-            <!-- Quick Stats -->
-            <div class="row g-4 mb-4">
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="stat-card">
-                        <i class="bi bi-box text-primary"></i>
-                        <h3><?= $stats['totalProducts'] ?></h3>
-                        <p class="mb-0">Total Products</p>
-                    </div>
+        <!-- Quick Actions Grid -->
+        <div class="container-md py-3">
+            <div class="row justify-content-center g-4">
+                <div class="col-sm-6 col-md-4">
+                    <a href="admin_manage_products.php" class="quick-action shadow">
+                        <i class="bi bi-box-seam text-primary"></i>
+                        <h5>Manage Products</h5>
+                        <p class="mb-0">Add, edit or remove products</p>
+                    </a>
                 </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="stat-card">
+                <div class="col-sm-6 col-md-4">
+                    <a href="manage_users.php" class="quick-action shadow">
                         <i class="bi bi-people text-success"></i>
-                        <h3><?= $stats['totalUsers'] ?></h3>
-                        <p class="mb-0">Total Users</p>
-                    </div>
+                        <h5>Manage Users</h5>
+                        <p class="mb-0">Edit user accounts and permissions</p>
+                    </a>
                 </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="stat-card">
+                <div class="col-sm-6 col-md-4">
+                    <a href="manage_suppliers.php" class="quick-action shadow">
                         <i class="bi bi-truck text-warning"></i>
-                        <h3><?= $stats['totalSuppliers'] ?></h3>
-                        <p class="mb-0">Total Suppliers</p>
-                    </div>
+                        <h5>Manage Suppliers</h5>
+                        <p class="mb-0">Add or edit supplier information</p>
+                    </a>
                 </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="stat-card">
-                        <i class="bi bi-tags text-danger"></i>
-                        <h3><?= $stats['totalCategories'] ?></h3>
-                        <p class="mb-0">Total Categories</p>
-                    </div>
+                <div class="col-sm-6 col-md-4">
+                    <a href="manage_category.php" class="quick-action shadow active">
+                        <i class="bi bi-tags text-light"></i>
+                        <h5>Manage Categories</h5>
+                        <p class="mb-0">Organize products with categories</p>
+                    </a>
                 </div>
-            </div>
-
-            <!-- Recent Activity Section -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-white">
-                            <h5 class="card-title mb-0">Recent Activity</h5>
-                        </div>
-                        <div class="card-body">
-                            <!-- Add your recent activity content here -->
-                            <p class="text-muted">No recent activities to display.</p>
-                        </div>
-                    </div>
+                <div class="col-sm-6 col-md-4">
+                    <a href="admin_manager_scan.php" class="quick-action shadow">
+                        <i class="bi bi-qr-code-scan text-info"></i>
+                        <h5>Scan Products</h5>
+                        <p class="mb-0">Quickly scan product barcodes</p>
+                    </a>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <a href="low_stock_notifications.php" class="quick-action shadow">
+                        <i class="bi bi-bell-fill text-secondary"></i>
+                        <h5>Stock Alerts</h5>
+                        <p class="mb-0">View products with low inventory</p>
+                    </a>
                 </div>
             </div>
         </div>
+
+        <!-- Statistics -->
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon text-primary">
+                        <i class="bi bi-box-seam"></i>
+                    </div>
+                    <h3 class="mb-2"><?= $stats['totalProducts'] ?></h3>
+                    <p class="text-muted mb-0">Total Products</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon text-success">
+                        <i class="bi bi-people"></i>
+                    </div>
+                    <h3 class="mb-2"><?= $stats['totalUsers'] ?></h3>
+                    <p class="text-muted mb-0">Total Users</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon text-warning">
+                        <i class="bi bi-truck"></i>
+                    </div>
+                    <h3 class="mb-2"><?= $stats['totalSuppliers'] ?></h3>
+                    <p class="text-muted mb-0">Total Suppliers</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon text-danger">
+                        <i class="bi bi-tags"></i>
+                    </div>
+                    <h3 class="mb-2"><?= $stats['totalCategories'] ?></h3>
+                    <p class="text-muted mb-0">Total Categories</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="activity-card">
+            <h5 class="card-title mb-4">Recent Activities</h5>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if ($recent_activities && $recent_activities->num_rows > 0): ?>
+                            <?php while ($activity = $recent_activities->fetch_assoc()): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($activity['product_name']) ?></td>
+                                    <td>
+                                        <span class="badge bg-<?= $activity['transaction_type'] === 'Incoming' ? 'success' : 'warning' ?>">
+                                            <?= $activity['transaction_type'] ?>
+                                        </span>
+                                    </td>
+                                    <td><?= $activity['quantity'] ?></td>
+                                    <td><?= date('M d, Y H:i', strtotime($activity['created_at'])) ?></td>
+                                </tr>
+                            <?php endwhile; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">No recent activities to display.</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        
+
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Toggle Sidebar
-        document.querySelector('.toggle-sidebar').addEventListener('click', function() {
+        // Mobile sidebar toggle
+        document.getElementById('sidebar-toggle').addEventListener('click', function() {
             document.querySelector('.sidebar').classList.toggle('active');
             document.querySelector('.main-content').classList.toggle('active');
         });
 
         // Close sidebar on mobile when clicking outside
-        document.addEventListener('click', function(event) {
+        document.addEventListener('click', function(e) {
             const sidebar = document.querySelector('.sidebar');
-            const toggleBtn = document.querySelector('.toggle-sidebar');
+            const sidebarToggle = document.getElementById('sidebar-toggle');
             
-            if (window.innerWidth <= 768) {
-                if (!sidebar.contains(event.target) && !toggleBtn.contains(event.target)) {
-                    sidebar.classList.remove('active');
-                    document.querySelector('.main-content').classList.remove('active');
-                }
+            if (window.innerWidth <= 768 && 
+                !sidebar.contains(e.target) && 
+                !sidebarToggle.contains(e.target)) {
+                sidebar.classList.remove('active');
+                document.querySelector('.main-content').classList.remove('active');
             }
-        });
-
-        // Initialize tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
         });
     </script>
 </body>
